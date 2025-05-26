@@ -44,6 +44,34 @@ impl zed::Extension for CsharpExtension {
             language_server_id => Err(format!("unknown language server: {language_server_id}")),
         }
     }
+
+    fn language_server_initialization_options(
+        &mut self,
+        language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed_extension_api::serde_json::Value>> {
+        if language_server_id.as_ref() == Roslyn::LANGUAGE_SERVER_ID {
+            if let Some(roslyn) = self.roslyn.as_mut() {
+                return roslyn.language_server_init_options(worktree);
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        language_server_id: &zed_extension_api::LanguageServerId,
+        worktree: &zed_extension_api::Worktree,
+    ) -> Result<Option<zed_extension_api::serde_json::Value>> {
+        if language_server_id.as_ref() == Roslyn::LANGUAGE_SERVER_ID {
+            if let Some(roslyn) = self.roslyn.as_mut() {
+                return roslyn.language_server_workspace_configuration(worktree);
+            }
+        }
+
+        Ok(None)
+    }
 }
 
 zed::register_extension!(CsharpExtension);

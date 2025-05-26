@@ -1,5 +1,6 @@
 use std::fs;
 
+use rust_search::SearchBuilder;
 use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
 
 pub struct Roslyn {
@@ -47,4 +48,46 @@ impl Roslyn {
         }
         Err("Roslyn binary not found".to_string())
     }
+
+    pub fn language_server_init_options(
+        &mut self,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed_extension_api::serde_json::Value>> {
+        let root_path = worktree.root_path();
+        let csproj: Vec<String> = SearchBuilder::default()
+            .location(root_path)
+            .ext("csproj")
+            .build()
+            .collect();
+
+        let uris: Vec<String> = csproj
+            .iter()
+            .map(|file_path| path_to_uri(file_path))
+            .collect();
+
+        let notification = zed::serde_json::json!({
+                "method": "project/open",
+                "params": {
+                    "projects": uris
+                },
+        });
+
+        Ok(Some(notification))
+    }
+    pub fn language_server_workspace_configuration(
+        &mut self,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed::serde_json::Value>> {
+        let settings = LspSettings::for_worktree("roslyn", worktree)
+            .ok()
+            .and_then(|lsp_settings| lsp_settings.settings.clone())
+            .unwrap_or_default();
+        Ok(Some(zed::serde_json::json!({
+            "roslyn":settings
+        })))
+    }
+}
+
+fn path_to_uri(file_path: &str) -> String {
+    format!("file://{file_path}")
 }
